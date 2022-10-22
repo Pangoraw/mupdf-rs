@@ -79,7 +79,7 @@ pub use error::Error;
 pub use font::{CjkFontOrdering, Font, SimpleFontEncoding, WriteMode};
 pub use glyph::Glyph;
 pub use image::Image;
-pub use link::Link;
+pub use link::{Link, LinkDest, LinkDestType};
 pub use matrix::Matrix;
 pub use outline::Outline;
 pub use page::Page;

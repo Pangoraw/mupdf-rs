@@ -2,12 +2,13 @@ use std::ffi::{CStr, CString};
 use std::io::Read;
 use std::ptr;
 use std::slice;
+use std::convert::TryFrom;
 
 use mupdf_sys::*;
 
 use crate::{
-    context, Buffer, Colorspace, Cookie, Device, DisplayList, Error, Link, Matrix, Pixmap, Quad,
-    Rect, Separations, TextPage, TextPageOptions,
+    context, Buffer, Colorspace, Cookie, Device, DisplayList, Error, Link, LinkDest, LinkDestType, Matrix, Pixmap, Quad,
+    Rect, Separations, TextPage, TextPageOptions, document::Location,
 };
 
 #[derive(Debug)]
@@ -339,20 +340,31 @@ impl Iterator for LinkIter {
             self.next = (*node).next;
             let bounds = (*node).rect.into();
             let uri = CStr::from_ptr((*node).uri).to_string_lossy().into_owned();
-            let mut page = 0;
+            let mut dest = None;
+            let page = 0;
             if fz_is_external_link(context(), (*node).uri) == 0 {
-                page = fz_resolve_link(
+                let fz_dest = fz_resolve_link_dest(
                     context(),
                     self.doc,
                     (*node).uri,
-                    ptr::null_mut(),
-                    ptr::null_mut(),
-                )
-                .page;
+                );
+                dest = Some(LinkDest {
+                    location: Location {
+                        chapter: fz_dest.loc.chapter,
+                        page: fz_dest.loc.page,
+                    },
+                    dest_type: LinkDestType::try_from(fz_dest.type_).ok()?,
+                    x: fz_dest.x,
+                    y: fz_dest.y,
+                    w: fz_dest.w,
+                    h: fz_dest.h,
+                    zoom: fz_dest.zoom,
+                });
             }
             Some(Link {
                 bounds,
-                page: page as u32,
+                dest,
+                page,
                 uri,
             })
         }
